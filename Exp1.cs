@@ -1,3 +1,6 @@
+using System.Diagnostics;
+using System.Runtime.InteropServices;
+
 unsafe class Program
 {
     [DllImport("libc")]
@@ -6,50 +9,56 @@ unsafe class Program
     [DllImport("libc")]
     static extern int munmap(void* addr, nuint length);
 
-    static void ShowMem(string step)
-    {
-        Console.WriteLine($"\n--- {step} ---");
-        foreach (string line in File.ReadAllLines("/proc/self/status"))
-        {
-            if (line.StartsWith("VmSize:") || line.StartsWith("VmRSS:"))
-                Console.WriteLine(line);
-        }
-        string stat = File.ReadAllText("/proc/self/stat");
-        string[] parts = stat.Substring(stat.LastIndexOf(')') + 2).Split(' ');
-        Console.WriteLine($"minor faults: {parts[7]}");
-    }
-
     static void Main()
     {
         int pageSize = 4096;
         nuint size = 256 * 1024 * 1024;
 
-        ShowMem("1. Начало");
+        Console.WriteLine($"Мой PID: {Environment.ProcessId}");
+        Console.WriteLine("1. Начало. Проверь память и нажми Enter...");
+        Console.ReadLine();
 
+        // Выделяем память
         byte* block = mmap(null, size, 3, 0x22, -1, 0);
-        ShowMem("2. После выделения");
+        Console.WriteLine("2. Память выделена (mmap). Проверь память и нажми Enter...");
+        Console.ReadLine();
 
+        // Первое чтение
         long sum = 0;
         var sw = Stopwatch.StartNew();
         for (nuint i = 0; i < size; i += (nuint)pageSize)
+        {
             sum += Volatile.Read(ref block[i]);
+        }
         sw.Stop();
-        ShowMem($"3. После чтения ({sw.Elapsed.TotalMilliseconds:F2} мс, сумма = {sum})");
+        Console.WriteLine($"3. Первое чтение готово за {sw.Elapsed.TotalMilliseconds:F2} мс (сумма = {sum}). Проверь память и нажми Enter...");
+        Console.ReadLine();
 
+        // Первая запись
         sw.Restart();
         for (nuint i = 0; i < size; i += (nuint)pageSize)
+        {
             Volatile.Write(ref block[i], 1);
+        }
         sw.Stop();
-        ShowMem($"4. После первой записи ({sw.Elapsed.TotalMilliseconds:F2} мс)");
+        Console.WriteLine($"4. Первая запись готова за {sw.Elapsed.TotalMilliseconds:F2} мс. Проверь память и нажми Enter...");
+        Console.ReadLine();
 
+        // Повторная запись
         sw.Restart();
         for (nuint i = 0; i < size; i += (nuint)pageSize)
+        {
             Volatile.Write(ref block[i], 2);
+        }
         sw.Stop();
-        ShowMem($"5. После повторной записи ({sw.Elapsed.TotalMilliseconds:F2} мс)");
-        Console.WriteLine($"Проверка: {block[0]}, {block[4096]}, {block[8192]}, {block[size - 4096]}");
+        Console.WriteLine($"5. Повторная запись готова за {sw.Elapsed.TotalMilliseconds:F2} мс.");
+        Console.WriteLine($"Проверка: [0]={block[0]}, [4096]={block[4096]}, [8192]={block[8192]}, [last]={block[size - 4096]}");
+        Console.WriteLine("Проверь память и нажми Enter...");
+        Console.ReadLine();
 
+        // Освобождение
         munmap(block, size);
-        ShowMem("6. После освобождения");
+        Console.WriteLine("6. Память освобождена (munmap). Проверь память и нажми Enter для выхода...");
+        Console.ReadLine();
     }
 }
