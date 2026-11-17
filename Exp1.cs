@@ -3,6 +3,7 @@ using System.Runtime.InteropServices;
 
 unsafe class Program
 {
+    // Подключение системных вызовов Linux
     [DllImport("libc")]
     static extern byte* mmap(void* addr, nuint length, int prot, int flags, int fd, nint offset);
 
@@ -14,16 +15,15 @@ unsafe class Program
         int pageSize = 4096;
         nuint size = 256 * 1024 * 1024;
 
-        Console.WriteLine($"Мой PID: {Environment.ProcessId}");
-        Console.WriteLine("1. Начало. Проверь память и нажми Enter...");
+        Console.WriteLine("1. Начало.");
         Console.ReadLine();
 
-        // Выделяем память
+        // Шаг 2: выделяем память
         byte* block = mmap(null, size, 3, 0x22, -1, 0);
-        Console.WriteLine("2. Память выделена (mmap). Проверь память и нажми Enter...");
+        Console.WriteLine("2. Память выделена (mmap).");
         Console.ReadLine();
 
-        // Первое чтение
+        // Шаг 3: первое чтение
         long sum = 0;
         var sw = Stopwatch.StartNew();
         for (nuint i = 0; i < size; i += (nuint)pageSize)
@@ -31,20 +31,20 @@ unsafe class Program
             sum += Volatile.Read(ref block[i]);
         }
         sw.Stop();
-        Console.WriteLine($"3. Первое чтение готово за {sw.Elapsed.TotalMilliseconds:F2} мс (сумма = {sum}). Проверь память и нажми Enter...");
+        Console.WriteLine($"3. Чтение готово за {sw.Elapsed.TotalMilliseconds:F2} мс (сумма = {sum}).");
         Console.ReadLine();
 
-        // Первая запись
+        // Шаг 4: первая запись
         sw.Restart();
         for (nuint i = 0; i < size; i += (nuint)pageSize)
         {
             Volatile.Write(ref block[i], 1);
         }
         sw.Stop();
-        Console.WriteLine($"4. Первая запись готова за {sw.Elapsed.TotalMilliseconds:F2} мс. Проверь память и нажми Enter...");
+        Console.WriteLine($"4. Первая запись готова за {sw.Elapsed.TotalMilliseconds:F2} мс.");
         Console.ReadLine();
 
-        // Повторная запись
+        // Шаг 5: повторная запись
         sw.Restart();
         for (nuint i = 0; i < size; i += (nuint)pageSize)
         {
@@ -52,13 +52,13 @@ unsafe class Program
         }
         sw.Stop();
         Console.WriteLine($"5. Повторная запись готова за {sw.Elapsed.TotalMilliseconds:F2} мс.");
-        Console.WriteLine($"Проверка: [0]={block[0]}, [4096]={block[4096]}, [8192]={block[8192]}, [last]={block[size - 4096]}");
-        Console.WriteLine("Проверь память и нажми Enter...");
+        Console.WriteLine($"Проверка: {block[0]}, {block[4096]}, {block[8192]}, {block[size - 4096]}");
+        Console.WriteLine("Сверь память");
         Console.ReadLine();
 
-        // Освобождение
+        // Шаг 6: освобождение
         munmap(block, size);
-        Console.WriteLine("6. Память освобождена (munmap). Проверь память и нажми Enter для выхода...");
+        Console.WriteLine("6. Память освобождена (munmap). Сверь память");
         Console.ReadLine();
     }
 }
